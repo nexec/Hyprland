@@ -12,7 +12,7 @@ int handleCritSignal(int signo, void* data) {
     Debug::log(LOG, "Hyprland received signal %d", signo);
 
     if (signo == SIGTERM || signo == SIGINT || signo == SIGKILL) {
-        g_pCompositor->cleanup();
+	    g_pCompositor->stop();
     }
 
     return 0; // everything went fine
@@ -302,30 +302,38 @@ void CCompositor::initAllSignals() {
         addWLSignal(&m_sWLRSession->events.active, &Events::listen_sessionActive, m_sWLRSession, "Session");
 }
 
-void CCompositor::cleanup() {
+void CCompositor::stop() {
     if (!m_sWLDisplay || m_bIsShuttingDown)
         return;
 
     m_bIsShuttingDown = true;
+    wl_display_terminate(m_sWLDisplay);
+    g_pEventManager->stop();
+    // Further termination sequence is executed startCompositor...
+}
+
+void CCompositor::cleanup() {
+    if (!m_sWLDisplay)
+	    return;
+    stop();
 
     // unload all remaining plugins while the compositor is
     // still in a normal working state.
-    g_pPluginSystem->unloadAllPlugins();
+    g_pPluginSystem->unloadAllPlugins(); // some hooks may be omitted, cause cleanup performed further
 
     m_pLastFocus  = nullptr;
     m_pLastWindow = nullptr;
 
-    // accumulate all PIDs for killing, also request closing.
-    for (auto& w : m_vWindows) {
-        if (w->m_bIsMapped && !w->isHidden())
-            m_dProcessPIDsOnShutdown.push_back(w->getPID());
-    }
+//    // accumulate all PIDs for killing, also request closing.
+//    for (auto& w : m_vWindows) {
+//        if (w->m_bIsMapped && !w->isHidden())
+//            m_dProcessPIDsOnShutdown.push_back(w->getPID());
+//    }
 
     // end threads
-    g_pEventManager->m_tThread = std::thread();
 
-    m_vWorkspaces.clear();
-    m_vWindows.clear();
+    m_vWorkspaces.clear(); // can be omitted
+    m_vWindows.clear();    // can be omitted
 
     for (auto& m : m_vMonitors) {
         g_pHyprOpenGL->destroyMonitorResources(m.get());
@@ -343,12 +351,7 @@ void CCompositor::cleanup() {
 
     wl_display_destroy_clients(g_pCompositor->m_sWLDisplay);
 
-    wl_display_terminate(m_sWLDisplay);
-
     m_sWLDisplay = nullptr;
-
-    g_pKeybindManager->spawn("sleep 5 && kill -9 " + std::to_string(m_iHyprlandPID)); // this is to prevent that random "freezing"
-                                                                                      // the PID should not be reused.
 }
 
 void CCompositor::initManagers(eManagersInitStage stage) {
@@ -398,7 +401,7 @@ void CCompositor::initManagers(eManagersInitStage stage) {
 
             Debug::log(LOG, "Creating the EventManager!");
             g_pEventManager = std::make_unique<CEventManager>();
-            g_pEventManager->startThread();
+            g_pEventManager->start();
 
             Debug::log(LOG, "Creating the HyprDebugOverlay!");
             g_pDebugOverlay = std::make_unique<CHyprDebugOverlay>();

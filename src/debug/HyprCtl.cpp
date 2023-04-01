@@ -10,9 +10,12 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <errno.h>
+#include <fcntl.h>
 
 #include <sstream>
 #include <string>
+
+#include <chrono>
 
 std::string monitorsRequest(HyprCtl::eHyprCtlOutputFormat format) {
     std::string result = "";
@@ -643,6 +646,7 @@ std::string dispatchRequest(std::string in) {
     const auto DISPATCHER = g_pKeybindManager->m_mDispatchers.find(DISPATCHSTR);
     if (DISPATCHER == g_pKeybindManager->m_mDispatchers.end())
         return "Invalid dispatcher";
+    Debug::log(LOG, "HyprctlDDD: dispatcher %s : %s", DISPATCHSTR.c_str(), DISPATCHARG.c_str());
 
     DISPATCHER->second(DISPATCHARG);
 
@@ -1158,6 +1162,8 @@ std::string getReply(std::string request) {
             request = request.substr(sepIndex + 1); // remove flags and separator so we can compare the rest of the string
     }
 
+    Debug::log(LOG, "REQ: '%s', SIZE: '%d'", request, request.length());
+
     if (request == "monitors")
         return monitorsRequest(format);
     else if (request == "workspaces")
@@ -1214,15 +1220,21 @@ std::string HyprCtl::makeDynamicCall(const std::string& input) {
 
 int hyprCtlFDTick(int fd, uint32_t mask, void* data) {
     if (mask & WL_EVENT_ERROR || mask & WL_EVENT_HANGUP)
+    {
+	    Debug::log(ERR, "Skip FDTick: %d", mask);
         return 0;
+    }
 
     sockaddr_in clientAddress;
     socklen_t   clientSize = sizeof(clientAddress);
 
-    const auto  ACCEPTEDCONNECTION = accept(HyprCtl::iSocketFD, (sockaddr*)&clientAddress, &clientSize);
+    const auto  ACCEPTEDCONNECTION = accept4(HyprCtl::iSocketFD, (sockaddr*)&clientAddress, &clientSize, SOCK_CLOEXEC);
+    fcntl(ACCEPTEDCONNECTION, F_SETFD, FD_CLOEXEC);
+    Debug::log(LOG, "Accepted new connection");
 
     char        readBuffer[1024];
 
+    auto start = std::chrono::steady_clock::now();
     auto        messageSize                              = read(ACCEPTEDCONNECTION, readBuffer, 1024);
     readBuffer[messageSize == 1024 ? 1023 : messageSize] = '\0';
 
@@ -1230,6 +1242,7 @@ int hyprCtlFDTick(int fd, uint32_t mask, void* data) {
 
     std::string reply = "";
 
+    Debug::log(LOG, "Processing request...");
     try {
         reply = getReply(request);
     } catch (std::exception& e) {
@@ -1237,9 +1250,15 @@ int hyprCtlFDTick(int fd, uint32_t mask, void* data) {
         reply = "Err: " + std::string(e.what());
     }
 
+    Debug::log(LOG, "Got reply length: %d", reply.length());
     write(ACCEPTEDCONNECTION, reply.c_str(), reply.length());
 
     close(ACCEPTEDCONNECTION);
+
+    auto end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> delta = end - start;
+    Debug::log(LOG, "\"%s\" processing took %lf", request, delta.count());
+    Debug::log(LOG, "processing took %lf", delta.count());
 
     if (g_pConfigManager->m_bWantsMonitorReload) {
         g_pConfigManager->ensureDPMS();
@@ -1257,6 +1276,7 @@ void HyprCtl::startHyprCtlSocket() {
         return;
     }
 
+    fcntl(iSocketFD, F_SETFD, FD_CLOEXEC);
     sockaddr_un SERVERADDRESS = {.sun_family = AF_UNIX};
 
     std::string socketPath = "/tmp/hypr/" + g_pCompositor->m_szInstanceSignature + "/.socket.sock";

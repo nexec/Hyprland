@@ -2,6 +2,7 @@
 #include <deque>
 #include <fstream>
 #include <mutex>
+#include <condition_variable>
 
 #include "../defines.hpp"
 #include "../helpers/MiscFunctions.hpp"
@@ -13,23 +14,29 @@ struct SHyprIPCEvent {
 
 class CEventManager {
   public:
-    CEventManager();
+    CEventManager() = default;
+    ~CEventManager();
 
     void        postEvent(const SHyprIPCEvent event, bool force = false);
 
-    void        startThread();
+    void        start();
 
     bool        m_bIgnoreEvents = false;
 
-    std::thread m_tThread;
+    void        stop();
 
   private:
     void                                         flushEvents();
 
-    std::mutex                                   eventQueueMutex;
+    mutable std::mutex                           m_mEventQueue;
+    std::condition_variable m_cvEvents;
     std::deque<SHyprIPCEvent>                    m_dQueuedEvents;
 
     std::deque<std::pair<int, wl_event_source*>> m_dAcceptedSocketFDs;
+    int m_sEvent;
+    std::thread m_tServerThread;
+    std::thread m_tQueueThread;
+    bool m_bIsRunning = false;
 };
 
 inline std::unique_ptr<CEventManager> g_pEventManager;
