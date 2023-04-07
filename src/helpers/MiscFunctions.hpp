@@ -4,6 +4,7 @@
 
 std::string absolutePath(const std::string&, const std::string&);
 void        addWLSignal(wl_signal*, wl_listener*, void* pOwner, const std::string& ownerString);
+void        delWLSignal(wl_signal*, wl_listener*);
 std::string getFormat(const char* fmt, ...); // Basically Debug::log to a string
 std::string escapeJSONStrings(const std::string& str);
 void        scaleBox(wlr_box*, float);

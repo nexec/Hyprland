@@ -73,15 +73,22 @@ int main(int argc, char** argv) {
         sd_notify(0, "STOPPING=1");
 #endif
 
-    if (g_pCompositor->m_sWLDisplay)
-        wl_display_destroy_clients(g_pCompositor->m_sWLDisplay);
+    g_pCompositor->cleanup();
+//    if (g_pCompositor->m_sWLDisplay)
+//        wl_display_destroy_clients(g_pCompositor->m_sWLDisplay);
+//
+//    // kill all clients
+//    for (auto& c : g_pCompositor->m_dProcessPIDsOnShutdown)
+//        kill(c, SIGKILL);
 
-    // kill all clients
-    for (auto& c : g_pCompositor->m_dProcessPIDsOnShutdown)
-        kill(c, SIGKILL);
+    // cleanup in dtor?
+//    if (g_pCompositor->m_sWLDisplay)
+//    {
+//        wl_display_destroy(g_pCompositor->m_sWLDisplay);
+//    }
 
-    if (g_pCompositor->m_sWLDisplay)
-        wl_display_destroy(g_pCompositor->m_sWLDisplay);
+// ok ->    g_pCompositor.reset();
 
+    g_pCompositor.reset();
     return EXIT_SUCCESS;
 }

@@ -31,6 +31,8 @@ int fdHandleWrite(int fd, uint32_t mask, void* data) {
                 it++;
             }
         }
+
+	close(fd);
     }
 
     return 0;
@@ -109,7 +111,7 @@ std::deque<SHyprIPCEvent> dQueuedEvents;
 
 void CEventManager::postEvent(const SHyprIPCEvent event, bool force) {
 
-    if ((m_bIgnoreEvents && !force) || g_pCompositor->m_bIsShuttingDown) {
+    if ((m_bIgnoreEvents && !force) || !m_bIsRunning) {
         Debug::log(WARN, "Suppressed (ignoreevents true / shutting down) event of type %s, content: %s", event.event.c_str(), event.data.c_str());
         return;
     }

@@ -73,6 +73,7 @@ CCompositor::CCompositor() {
 }
 
 CCompositor::~CCompositor() {
+	    Debug::log(LOG, "Compositor dtor");
     cleanup();
 }
 
@@ -308,22 +309,28 @@ void CCompositor::stop() {
 
     m_bIsShuttingDown = true;
     wl_display_terminate(m_sWLDisplay);
-    g_pEventManager->stop();
     // Further termination sequence is executed startCompositor...
 }
 
 void CCompositor::cleanup() {
+	    Debug::log(LOG, "Initiating compositor cleanup");
     if (!m_sWLDisplay)
+    {
+	    Debug::log(LOG, "Unable to cleanup compositor");
 	    return;
+    }
     stop();
 
+    Debug::log(LOG, "CCompositor already stopped");
     // unload all remaining plugins while the compositor is
     // still in a normal working state.
     g_pPluginSystem->unloadAllPlugins(); // some hooks may be omitted, cause cleanup performed further
+    Debug::log(LOG, "CCompositor plugins unloaded");
 
     m_pLastFocus  = nullptr;
     m_pLastWindow = nullptr;
 
+    Debug::log(LOG, "WIndow focus reset");
 //    // accumulate all PIDs for killing, also request closing.
 //    for (auto& w : m_vWindows) {
 //        if (w->m_bIsMapped && !w->isHidden())
@@ -333,7 +340,9 @@ void CCompositor::cleanup() {
     // end threads
 
     m_vWorkspaces.clear(); // can be omitted
+    Debug::log(LOG, "Workspaces cleared");
     m_vWindows.clear();    // can be omitted
+    Debug::log(LOG, "Windows cleared");
 
     for (auto& m : m_vMonitors) {
         g_pHyprOpenGL->destroyMonitorResources(m.get());
@@ -341,17 +350,36 @@ void CCompositor::cleanup() {
         wlr_output_enable(m->output, false);
         wlr_output_commit(m->output);
     }
+    Debug::log(LOG, "Monitors prepared");
 
     m_vMonitors.clear();
+    Debug::log(LOG, "Monitors cleared");
 
     if (g_pXWaylandManager->m_sWLRXWayland) {
         wlr_xwayland_destroy(g_pXWaylandManager->m_sWLRXWayland);
         g_pXWaylandManager->m_sWLRXWayland = nullptr;
     }
 
+    Debug::log(LOG, "m_sWLRXWayland cleared");
     wl_display_destroy_clients(g_pCompositor->m_sWLDisplay);
+    Debug::log(LOG, "wl_display_destroy_clients cleared");
+    if (g_pEventManager)
+    g_pEventManager->stop();
+    Debug::log(LOG, "g_pEventManager stopped");
+//    wl_display_destroy(m_sWLDisplay); <<< !!!! it is was a deadcode in main.cpp
 
-    m_sWLDisplay = nullptr;
+    {
+	    // missing part, required due to asserts
+//	    struct signal_emit_mutable_data data = {0};
+//	    data.remove_listener = &Events::listen_newSessionLock;
+//	    wl_signal_emit_mutable(&m_sWLRSessionLockMgr->events.new_lock, &data);
+	    delWLSignal(&m_sWLRSessionLockMgr->events.new_lock, &Events::listen_newSessionLock);
+    }
+
+    wl_display_destroy(m_sWLDisplay); // <<< !!!! it is was a deadcode in main.cpp
+    Debug::log(LOG, "wl_display_destroy done");
+    m_sWLDisplay = nullptr; // WAT???? is it even was destroyed
+	    Debug::log(LOG, "Compositor cleared");
 }
 
 void CCompositor::initManagers(eManagersInitStage stage) {

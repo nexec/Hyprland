@@ -152,6 +152,21 @@ void addWLSignal(wl_signal* pSignal, wl_listener* pListener, void* pOwner, const
     Debug::log(LOG, "Registered signal for owner %x: %x -> %x (owner: %s)", pOwner, pSignal, pListener, ownerString.c_str());
 }
 
+void delWLSignal(wl_signal*, wl_listener* pListener) {
+//    ASSERT(pSignal);
+    ASSERT(pListener);
+    wl_list_remove(&pListener->link);
+
+//    struct signal_emit_mutable_data {
+//        int count;
+//        struct wl_listener *remove_listener;
+//    };
+//
+//    struct signal_emit_mutable_data data = {0};
+//    data.remove_listener = pListener;
+//    wl_signal_emit_mutable(pSignal, &data);
+}
+
 void handleNoop(struct wl_listener* listener, void* data) {
     // Do nothing
 }
