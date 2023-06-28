@@ -1162,7 +1162,7 @@ std::string getReply(std::string request) {
             request = request.substr(sepIndex + 1); // remove flags and separator so we can compare the rest of the string
     }
 
-    Debug::log(LOG, "REQ: '%s', SIZE: '%d'", request, request.length());
+    Debug::log(LOG, "REQ: '%s', SIZE: '%d'", request.c_str(), request.length());
 
     if (request == "monitors")
         return monitorsRequest(format);
@@ -1242,7 +1242,7 @@ int hyprCtlFDTick(int fd, uint32_t mask, void* data) {
 
     std::string reply = "";
 
-    Debug::log(LOG, "Processing request...");
+//    Debug::log(LOG, "Processing request...");
     try {
         reply = getReply(request);
     } catch (std::exception& e) {
@@ -1250,15 +1250,15 @@ int hyprCtlFDTick(int fd, uint32_t mask, void* data) {
         reply = "Err: " + std::string(e.what());
     }
 
-    Debug::log(LOG, "Got reply length: %d", reply.length());
+//    Debug::log(LOG, "Got reply length: %d", reply.length());
     write(ACCEPTEDCONNECTION, reply.c_str(), reply.length());
 
     close(ACCEPTEDCONNECTION);
 
-    auto end = std::chrono::steady_clock::now();
-    std::chrono::duration<double> delta = end - start;
-    Debug::log(LOG, "\"%s\" processing took %lf", request, delta.count());
-    Debug::log(LOG, "processing took %lf", delta.count());
+//    auto end = std::chrono::steady_clock::now();
+//    std::chrono::duration<double> delta = end - start;
+//    Debug::log(LOG, "\"%s\" processing took %lf", request.c_str(), delta.count());
+//    Debug::log(LOG, "processing took %lf", delta.count());
 
     if (g_pConfigManager->m_bWantsMonitorReload) {
         g_pConfigManager->ensureDPMS();

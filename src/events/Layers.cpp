@@ -234,6 +234,7 @@ void Events::listener_unmapLayerSurface(void* owner, void* data) {
             g_pCompositor->focusWindow(PLASTWINDOW);
         } else {
             // otherwise, full refocus
+		Debug::log(LOG, "uunmapLayerSurface -> refocus");
             g_pInputManager->refocus();
         }
     }

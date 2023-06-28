@@ -841,15 +841,22 @@ void CKeybindManager::changeworkspace(std::string args) {
             g_pCompositor->focusWindow(PWINDOW, g_pXWaylandManager->getWindowSurface(PWINDOW));
 
             if (g_pCompositor->cursorOnReservedArea()) // fix focus on bars etc
+	    {
+		    Debug::log(LOG, "changeworkspace -> refocus (cursorOnReservedArea)");
                 g_pInputManager->refocus();
+	    }
         } else if (g_pCompositor->getWindowsOnWorkspace(PWORKSPACETOCHANGETO->m_iID) > 0)
+	{
+		    Debug::log(LOG, "changeworkspace -> refocus [1]");
             g_pInputManager->refocus();
+	}
         else {
             // if there are no windows on the workspace, just unfocus the window on the previous workspace
             g_pCompositor->focusWindow(nullptr);
         }
 
         // set the new monitor as the last (no warps would bug otherwise)
+	Debug::log(LOG, "changeworkspace -> setActiveMonitor %lu", PWORKSPACETOCHANGETO->m_iMonitorID);
         g_pCompositor->setActiveMonitor(g_pCompositor->getMonitorFromID(PWORKSPACETOCHANGETO->m_iMonitorID));
 
         // mark the monitor dirty
@@ -860,6 +867,11 @@ void CKeybindManager::changeworkspace(std::string args) {
 
     // Workspace doesn't exist, create and switch
     const auto BOUNDMON = g_pConfigManager->getBoundMonitorForWS(workspaceName);
+    if (BOUNDMON) {
+	    Debug::log(LOG, "Found boundmon");
+    } else {
+	    Debug::log(LOG, "Using monitor from cursor");
+    }
 
     const auto PMONITOR = BOUNDMON ? BOUNDMON : g_pCompositor->getMonitorFromCursor();
 
@@ -914,10 +926,14 @@ void CKeybindManager::changeworkspace(std::string args) {
     g_pEventManager->postEvent(SHyprIPCEvent{"workspace", PWORKSPACE->m_szName});
     EMIT_HOOK_EVENT("workspace", PWORKSPACE);
 
+    Debug::log(LOG, "changeworkspace -> setActiveMonitor [2] monitor ID=%lu", PMONITOR->ID); // BUG??
     g_pCompositor->setActiveMonitor(PMONITOR);
 
     // focus (clears the last)
-    g_pInputManager->refocus();
+    Debug::log(LOG, "changeworkspace -> refocus");
+    static auto* const PNOWARPS = &g_pConfigManager->getConfigValuePtr("general:no_cursor_warps")->intValue;
+    if (!*PNOWARPS)
+        g_pInputManager->refocus();
 
     // Events
     if (ANOTHERMONITOR)
@@ -1015,6 +1031,7 @@ void CKeybindManager::moveActiveToWorkspace(std::string args) {
         g_pCompositor->focusWindow(PWINDOW);
     } else {
         g_pHyprRenderer->damageMonitor(g_pCompositor->getMonitorFromID(PWINDOW->m_iMonitorID));
+	Debug::log(LOG, "moveActiveToWorkspace -> refocus");
         g_pInputManager->refocus();
     }
 
@@ -1142,6 +1159,7 @@ void CKeybindManager::moveFocusTo(std::string args) {
                 const auto PNEWMON       = g_pCompositor->getMonitorFromID(PWINDOWTOCHANGETO->m_iMonitorID);
                 const auto PNEWWORKSPACE = g_pCompositor->getWorkspaceByID(PWINDOWTOCHANGETO->m_iWorkspaceID);
 
+		Debug::log(LOG, "moveFocusTo -> setActiveMonitor");
                 g_pCompositor->setActiveMonitor(PNEWMON);
 
                 g_pCompositor->deactivateAllWLRWorkspaces(PNEWWORKSPACE->m_pWlrHandle);
@@ -1616,7 +1634,10 @@ void CKeybindManager::toggleSpecialWorkspace(std::string args) {
         if (const auto PWINDOW = g_pCompositor->getWorkspaceByID(PMONITOR->activeWorkspace)->getLastFocusedWindow(); PWINDOW)
             g_pCompositor->focusWindow(PWINDOW);
         else
+	{
+		Debug::log(LOG, "toggleSpecialWorkspace -> refocus");
             g_pInputManager->refocus();
+	}
     } else if (requestedWorkspaceIsAlreadyOpen) {
         // already open on another monitor
 
@@ -1639,7 +1660,10 @@ void CKeybindManager::toggleSpecialWorkspace(std::string args) {
         if (const auto PWINDOW = PSPECIALWORKSPACE->getLastFocusedWindow(); PWINDOW)
             g_pCompositor->focusWindow(PWINDOW);
         else
+	{
+		Debug::log(LOG, "toggleSpecialWorkspace -> refocus [2]");
             g_pInputManager->refocus();
+	}
     } else {
         // not open anywhere
 
@@ -1665,7 +1689,10 @@ void CKeybindManager::toggleSpecialWorkspace(std::string args) {
         if (const auto PWINDOW = PSPECIALWORKSPACE->getLastFocusedWindow(); PWINDOW)
             g_pCompositor->focusWindow(PWINDOW);
         else
+	{
+		Debug::log(LOG, "toggleSpecialWorkspace -> refocus [3]");
             g_pInputManager->refocus();
+	}
     }
 }
 

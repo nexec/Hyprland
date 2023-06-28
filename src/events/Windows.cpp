@@ -643,15 +643,18 @@ void Events::listener_unmapWindow(void* owner, void* data) {
     // do this after onWindowRemoved because otherwise it'll think the window is invalid
     PWINDOW->m_bIsMapped = false;
 
+    static auto* const PNOWARPS = &g_pConfigManager->getConfigValuePtr("general:no_cursor_warps")->intValue;
     // refocus on a new window if needed
-    if (wasLastWindow) {
+    if (wasLastWindow && !*PNOWARPS) {
         const auto PWINDOWCANDIDATE = g_pLayoutManager->getCurrentLayout()->getNextWindowCandidate(PWINDOW);
 
-        Debug::log(LOG, "On closed window, new focused candidate is %x", PWINDOWCANDIDATE);
+        Debug::log(LOG, "On closed window, new focused candidate is %x, lastwindow %x", PWINDOWCANDIDATE, g_pCompositor->m_pLastWindow);
 
         if (PWINDOWCANDIDATE != g_pCompositor->m_pLastWindow) {
             if (!PWINDOWCANDIDATE)
+	    {
                 g_pInputManager->refocus();
+	    }
             else
                 g_pCompositor->focusWindow(PWINDOWCANDIDATE);
         } else {
@@ -913,6 +916,7 @@ void Events::listener_configureX11(void* owner, void* data) {
 
     if (!PWINDOW->m_bIsFloating || PWINDOW->m_bIsFullscreen || g_pInputManager->currentlyDraggedWindow == PWINDOW) {
         g_pXWaylandManager->setWindowSize(PWINDOW, PWINDOW->m_vRealSize.goalv(), true);
+	Debug::log(LOG, "configureX11 -> refocus [1]");
         g_pInputManager->refocus();
         g_pHyprRenderer->damageWindow(PWINDOW);
         return;
@@ -937,7 +941,10 @@ void Events::listener_configureX11(void* owner, void* data) {
     PWINDOW->m_bCreatedOverFullscreen = true;
 
     if (!PWINDOW->m_sAdditionalConfigData.windowDanceCompat)
+    {
+	Debug::log(LOG, "configureX11 -> refocus [2]");
         g_pInputManager->refocus();
+    }
 
     g_pHyprRenderer->damageWindow(PWINDOW);
 

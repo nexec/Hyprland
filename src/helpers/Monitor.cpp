@@ -135,7 +135,10 @@ void CMonitor::onConnect(bool noRule) {
     EMIT_HOOK_EVENT("monitorAdded", this);
 
     if (!g_pCompositor->m_pLastMonitor) // set the last monitor if it isnt set yet
+    {
+	    Debug::log(LOG, "onConnect? -> setActiveMonitor set the last monitor if it isnt set yet");
         g_pCompositor->setActiveMonitor(this);
+    }
 
     wlr_xcursor_manager_load(g_pCompositor->m_sWLRXCursorMgr, scale);
 
@@ -155,7 +158,10 @@ void CMonitor::onConnect(bool noRule) {
     }
 
     if (!found)
+    {
+	    Debug::log(LOG, "onConnect? -> setActiveMonitor last active monitor not found, set");
         g_pCompositor->setActiveMonitor(this);
+    }
 }
 
 void CMonitor::onDisconnect() {
@@ -249,7 +255,10 @@ void CMonitor::onDisconnect() {
     std::erase_if(g_pCompositor->m_vWorkspaces, [&](std::unique_ptr<CWorkspace>& el) { return el->m_iMonitorID == ID; });
 
     if (g_pCompositor->m_pLastMonitor == this)
+    {
+	    Debug::log(LOG, "setActiveMonitor to BACKUPMON");
         g_pCompositor->setActiveMonitor(BACKUPMON);
+    }
 
     if (g_pHyprRenderer->m_pMostHzMonitor == this) {
         int       mostHz         = 0;
@@ -420,6 +429,7 @@ void CMonitor::setMirror(const std::string& mirrorOf) {
         // remove from mvmonitors
         std::erase_if(g_pCompositor->m_vMonitors, [&](const auto& other) { return other.get() == this; });
 
+	Debug::log(LOG, "setMirror -> setActiveMonitor");
         g_pCompositor->setActiveMonitor(g_pCompositor->m_vMonitors.front().get());
 
         g_pCompositor->sanityCheckWorkspaces();

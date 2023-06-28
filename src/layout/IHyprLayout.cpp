@@ -248,6 +248,7 @@ void IHyprLayout::onEndDragWindow() {
 
     if (DRAGGINGWINDOW->m_bDraggingTiled) {
         DRAGGINGWINDOW->m_bIsFloating = false;
+	Debug::log(LOG, "onEndDragWindow -> refocus");
         g_pInputManager->refocus();
         changeWindowFloatingMode(DRAGGINGWINDOW);
     }

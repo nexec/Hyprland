@@ -1798,6 +1798,7 @@ void CCompositor::swapActiveWorkspaces(CMonitor* pMonitorA, CMonitor* pMonitorB)
     g_pLayoutManager->getCurrentLayout()->recalculateMonitor(pMonitorA->ID);
     g_pLayoutManager->getCurrentLayout()->recalculateMonitor(pMonitorB->ID);
 
+    Debug::log(LOG, "swapActiveWorkspaces -> refocus");
     g_pInputManager->refocus();
 
     // event
@@ -1976,6 +1977,7 @@ void CCompositor::moveWorkspaceToMonitor(CWorkspace* pWorkspace, CMonitor* pMoni
     // finalize
     g_pLayoutManager->getCurrentLayout()->recalculateMonitor(POLDMON->ID);
 
+    Debug::log(LOG, "moveWorkspaceToMonitor -> refocus");
     g_pInputManager->refocus();
 
     // event
@@ -2160,7 +2162,10 @@ void CCompositor::warpCursorTo(const Vector2D& pos, bool force) {
 
     const auto PMONITORNEW = getMonitorFromVector(pos);
     if (PMONITORNEW != m_pLastMonitor)
+    {
+	    Debug::log(LOG, "warpCursorTo -> setActiveMonitor");
         setActiveMonitor(PMONITORNEW);
+    }
 }
 
 SLayerSurface* CCompositor::getLayerSurfaceFromWlr(wlr_layer_surface_v1* pLS) {
@@ -2250,7 +2255,13 @@ bool CCompositor::cursorOnReservedArea() {
 
     const auto CURSORPOS = g_pInputManager->getMouseCoordsInternal();
 
-    return !VECINRECT(CURSORPOS, XY1.x, XY1.y, XY2.x, XY2.y);
+    const auto res = !VECINRECT(CURSORPOS, XY1.x, XY1.y, XY2.x, XY2.y);
+
+    Debug::log(LOG, "MON=%lu, CURSOR.x=%lf, CURSOR.y=%lf, XY1.x=%lf, XY1.y=%lf, XY2.x=%lf, XY2.y=%lf, res=%d", PMONITOR->ID, CURSORPOS.x, CURSORPOS.y, XY1.x, XY1.y, XY2.x, XY2.y, res);
+    Debug::log(LOG, "vecPosition.x=%lf, vecPosition.y=%lf, vecReservedTopLeft=(%lf, %lf), vecReservedBottomRight=(%lf, %lf), vecSize=(%lf, %lf)", PMONITOR->vecPosition.x, PMONITOR->vecPosition.y, PMONITOR->vecReservedTopLeft.x, PMONITOR->vecReservedTopLeft.y, PMONITOR->vecReservedBottomRight.x, PMONITOR->vecReservedBottomRight.y, PMONITOR->vecSize.x, PMONITOR->vecSize.y);
+    Debug::log(LOG, "CursorOnReservedArea=%d", res);
+
+    return res;
 }
 
 CWorkspace* CCompositor::createNewWorkspace(const int& id, const int& monid, const std::string& name) {
@@ -2295,12 +2306,14 @@ void CCompositor::setActiveMonitor(CMonitor* pMonitor) {
         return;
 
     if (!pMonitor) {
+	    Debug::log(LOG, "setActiveMonitor reset m_pLastMonitor");
         m_pLastMonitor = nullptr;
         return;
     }
 
     const auto PWORKSPACE = getWorkspaceByID(pMonitor->activeWorkspace);
 
+    Debug::log(LOG, "Active monitor changed !!! ID=%lu", pMonitor->ID);
     g_pEventManager->postEvent(SHyprIPCEvent{"focusedmon", pMonitor->szName + "," + PWORKSPACE->m_szName});
     EMIT_HOOK_EVENT("focusedMon", pMonitor);
     m_pLastMonitor = pMonitor;
