@@ -177,7 +177,8 @@ void CToplevelExportProtocolManager::captureToplevel(wl_client* client, wl_resou
 
     const auto PMONITOR = g_pCompositor->getMonitorFromID(PFRAME->pWindow->m_iMonitorID);
 
-    PFRAME->shmFormat = wlr_output_preferred_read_format(PMONITOR->output);
+//    PFRAME->shmFormat = wlr_output_preferred_read_format(PMONITOR->output);
+    PFRAME->shmFormat = PMONITOR->output->render_format;
     if (PFRAME->shmFormat == DRM_FORMAT_INVALID) {
         Debug::log(ERR, "No format supported by renderer in capture toplevel");
         hyprland_toplevel_export_frame_v1_send_failed(resource);

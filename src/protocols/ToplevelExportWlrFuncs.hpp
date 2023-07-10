@@ -183,6 +183,7 @@ static enum wl_shm_format convert_drm_format_to_wl_shm(uint32_t fmt) {
     switch (fmt) {
         case DRM_FORMAT_XRGB8888: return WL_SHM_FORMAT_XRGB8888;
         case DRM_FORMAT_ARGB8888: return WL_SHM_FORMAT_ARGB8888;
+        case DRM_FORMAT_BGR888: return WL_SHM_FORMAT_BGR888;
         default: return (enum wl_shm_format)fmt;
     }
 }

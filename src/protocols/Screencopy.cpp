@@ -210,7 +210,8 @@ void CScreencopyProtocolManager::captureOutput(wl_client* client, wl_resource* r
     PFRAME->client = PCLIENT;
     PCLIENT->ref++;
 
-    PFRAME->shmFormat = wlr_output_preferred_read_format(PFRAME->pMonitor->output);
+//    PFRAME->shmFormat = wlr_output_preferred_read_format(PFRAME->pMonitor->output);
+    PFRAME->shmFormat = PFRAME->pMonitor->output->render_format;
     if (PFRAME->shmFormat == DRM_FORMAT_INVALID) {
         Debug::log(ERR, "No format supported by renderer in capture output");
         zwlr_screencopy_frame_v1_send_failed(PFRAME->resource);
@@ -433,7 +434,7 @@ bool CScreencopyProtocolManager::copyFrameShm(SScreencopyFrame* frame, timespec*
 
     const auto PFORMAT = get_gles2_format_from_drm(format);
     if (!PFORMAT) {
-        Debug::log(ERR, "[screencopy] Cannot read pixels, unsupported format %lx", PFORMAT);
+        Debug::log(ERR, "[screencopy] Cannot read pixels, unsupported format %lx", format);
         wlr_output_rollback(PMONITOR->output);
         pixman_region32_fini(&fakeDamage);
         wlr_buffer_end_data_ptr_access(frame->buffer);
